@@ -1,8 +1,9 @@
-import { db, type YouthEvent } from './db'
+import { db } from './db'
+import type { YouthEvent } from './db'
 
 export type CreateEventInput = {
   title: string
-  youth_name: string
+  participant_name: string
   date: string // YYYY-MM-DD
   start_time: string // HH:mm
   end_time: string // HH:mm
@@ -17,7 +18,7 @@ export type CreateEventInput = {
 /**
  * Get all approved events, sorted by start date (ascending)
  */
-export async function getApprovedEvents(): Promise<YouthEvent[]> {
+export async function getApprovedEvents(): Promise<Array<YouthEvent>> {
   const events = await db.getEvents()
   return events
     .filter((event) => event.approved)
@@ -47,7 +48,7 @@ export async function createEvent(
 
   const event = await db.addEvent({
     title: input.title.trim(),
-    youth_name: input.youth_name.trim(),
+    participant_name: input.participant_name.trim(),
     starts_at,
     ends_at,
     location_name: input.location_name?.trim(),
@@ -61,4 +62,3 @@ export async function createEvent(
 
   return event
 }
-

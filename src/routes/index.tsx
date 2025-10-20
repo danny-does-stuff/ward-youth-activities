@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { getApprovedEvents } from '../lib/events'
 import { EventCard } from '../components/EventCard'
@@ -26,7 +26,9 @@ function Home() {
       <div className="max-w-4xl mx-auto py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-4xl font-bold mb-2">Ward Youth Events</h1>
+            <h1 className="text-4xl font-bold mb-2">
+              Crossroads Ward Youth Events
+            </h1>
             <p className="text-white/70">
               Discover upcoming activities and performances
             </p>

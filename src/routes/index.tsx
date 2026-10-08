@@ -1,34 +1,55 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
-import { getApprovedEvents } from '../lib/events'
+import { z } from 'zod'
 import { EventCard } from '../components/EventCard'
+import { getWardName } from '../lib/auth.server'
+import {
+  addYouth,
+  getApprovedEvents,
+  getKnownYouthNames,
+} from '../lib/events.server'
+import { PageShell } from '../lib/page'
 
-const getEvents = createServerFn({
+const getHomeData = createServerFn({
   method: 'GET',
-}).handler(async () => await getApprovedEvents())
+}).handler(async () => ({
+  events: await getApprovedEvents(),
+  knownYouthNames: await getKnownYouthNames(),
+  wardName: getWardName(),
+}))
+
+const addYouthFn = createServerFn({ method: 'POST' })
+  .validator((data: { eventId: number; name: string }) => {
+    return z
+      .object({
+        eventId: z.number(),
+        name: z.string().trim().min(1, 'Youth name is required'),
+      })
+      .parse(data)
+  })
+  .handler(async ({ data }) => {
+    const event = await addYouth(data.eventId, data.name)
+    if (!event) {
+      throw new Error('Event not found')
+    }
+    return event
+  })
 
 export const Route = createFileRoute('/')({
   component: Home,
-  loader: async () => await getEvents(),
+  loader: async () => await getHomeData(),
 })
 
 function Home() {
-  const events = Route.useLoaderData()
+  const router = useRouter()
+  const { events, knownYouthNames, wardName } = Route.useLoaderData()
 
   return (
-    <div
-      className="min-h-screen bg-gradient-to-br from-zinc-800 to-black p-4 text-white"
-      style={{
-        backgroundImage:
-          'radial-gradient(50% 50% at 20% 60%, #23272a 0%, #18181b 50%, #000000 100%)',
-      }}
-    >
+    <PageShell>
       <div className="max-w-4xl mx-auto py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-4xl font-bold mb-2">
-              Crossroads Ward Youth Events
-            </h1>
+            <h1 className="text-4xl font-bold mb-2">{wardName}</h1>
             <p className="text-white/70">
               Discover upcoming activities and performances
             </p>
@@ -37,7 +58,7 @@ function Home() {
             to="/submit"
             className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-lg"
           >
-            Submit Event
+            Add Event
           </Link>
         </div>
 
@@ -53,17 +74,25 @@ function Home() {
               to="/submit"
               className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
             >
-              Submit Event
+              Add Event
             </Link>
           </div>
         ) : (
           <div className="grid gap-4">
             {events.map((event) => (
-              <EventCard key={event.id} event={event} />
+              <EventCard
+                key={event.id}
+                event={event}
+                knownYouthNames={knownYouthNames}
+                onAddYouth={async (name) => {
+                  await addYouthFn({ data: { eventId: event.id, name } })
+                  await router.invalidate()
+                }}
+              />
             ))}
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   )
 }

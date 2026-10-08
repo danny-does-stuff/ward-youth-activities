@@ -2,14 +2,15 @@ import { useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
-import { createEvent } from '../lib/events'
-import type { CreateEventInput } from '../lib/events'
+import { YouthNameInput } from '../components/YouthNameInput'
+import { createEvent, getKnownYouthNames } from '../lib/events.server'
 
-// Zod validation schema
 const eventSchema = z
   .object({
     title: z.string().trim().min(1, 'Title is required'),
-    participant_name: z.string().trim().min(1, 'Youth name is required'),
+    participant_names: z
+      .array(z.string().trim().min(1, 'Youth name is required'))
+      .min(1, 'At least one youth is required'),
     date: z.string().min(1, 'Date is required'),
     start_time: z.string().min(1, 'Start time is required'),
     end_time: z.string().min(1, 'End time is required'),
@@ -27,7 +28,6 @@ const eventSchema = z
   })
   .refine(
     (data) => {
-      // Validate that end_time > start_time
       const startDateTime = new Date(`${data.date}T${data.start_time}:00`)
       const endDateTime = new Date(`${data.date}T${data.end_time}:00`)
       return endDateTime > startDateTime
@@ -41,36 +41,43 @@ const eventSchema = z
 type EventFormData = z.infer<typeof eventSchema>
 
 const submitEvent = createServerFn({ method: 'POST' })
-  .inputValidator((data: EventFormData) => {
+  .validator((data: EventFormData) => {
     return eventSchema.parse(data)
   })
   .handler(async ({ data }) => {
-    const event = await createEvent(data as CreateEventInput)
-    return event
+    return createEvent(data)
   })
+
+const getSubmitPage = createServerFn({ method: 'GET' }).handler(async () => ({
+  knownYouthNames: await getKnownYouthNames(),
+}))
 
 export const Route = createFileRoute('/submit')({
   component: SubmitPage,
+  loader: async () => await getSubmitPage(),
 })
+
+const emptyForm: EventFormData = {
+  title: '',
+  participant_names: [''],
+  date: '',
+  start_time: '',
+  end_time: '',
+  location_name: '',
+  address: '',
+  contact_name: '',
+  contact_email: '',
+  contact_phone: '',
+  notes: '',
+}
 
 function SubmitPage() {
   const router = useRouter()
+  const { knownYouthNames } = Route.useLoaderData()
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [formData, setFormData] = useState<EventFormData>({
-    title: '',
-    participant_name: '',
-    date: '',
-    start_time: '',
-    end_time: '',
-    location_name: '',
-    address: '',
-    contact_name: '',
-    contact_email: '',
-    contact_phone: '',
-    notes: '',
-  })
+  const [formData, setFormData] = useState<EventFormData>(emptyForm)
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -85,26 +92,20 @@ function SubmitPage() {
     setError(null)
 
     try {
-      await submitEvent({ data: formData })
-      setSubmitted(true)
-      // Reset form
-      setFormData({
-        title: '',
-        participant_name: '',
-        date: '',
-        start_time: '',
-        end_time: '',
-        location_name: '',
-        address: '',
-        contact_name: '',
-        contact_email: '',
-        contact_phone: '',
-        notes: '',
+      await submitEvent({
+        data: {
+          ...formData,
+          participant_names: formData.participant_names.filter(
+            (name) => name.trim().length > 0,
+          ),
+        },
       })
+      setSubmitted(true)
+      setFormData(emptyForm)
       router.invalidate()
     } catch (err) {
       if (err instanceof z.ZodError) {
-        setError(err.errors[0]?.message || 'Validation error')
+        setError(err.issues[0]?.message || 'Validation error')
       } else {
         setError('Failed to submit event. Please try again.')
       }
@@ -197,23 +198,62 @@ function SubmitPage() {
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="participant_name"
-                className="block text-sm font-medium mb-2"
+            <div className="space-y-3">
+              {formData.participant_names.map((name, index) => (
+                <div key={index}>
+                  <label
+                    htmlFor={`youth-name-${index}`}
+                    className="block text-sm font-medium mb-2"
+                  >
+                    {index === 0 ? 'Youth name' : `Additional youth`}{' '}
+                    {index === 0 && <span className="text-red-400">*</span>}
+                  </label>
+                  <div className="flex gap-2">
+                    <YouthNameInput
+                      id={`youth-name-${index}`}
+                      value={name}
+                      knownNames={knownYouthNames}
+                      required={index === 0}
+                      onChange={(value) => {
+                        setFormData((prev) => {
+                          const participant_names = [...prev.participant_names]
+                          participant_names[index] = value
+                          return { ...prev, participant_names }
+                        })
+                        setError(null)
+                      }}
+                    />
+                    {index > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            participant_names: prev.participant_names.filter(
+                              (_, i) => i !== index,
+                            ),
+                          }))
+                        }}
+                        className="shrink-0 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-lg transition-colors"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    participant_names: [...prev.participant_names, ''],
+                  }))
+                }}
+                className="text-sm text-blue-300 hover:text-blue-200 font-medium"
               >
-                Youth Name <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="text"
-                id="participant_name"
-                name="participant_name"
-                value={formData.participant_name}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-lg border border-white/20 bg-white/10 backdrop-blur-sm text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                placeholder="Your name"
-              />
+                Add additional youth
+              </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -392,7 +432,7 @@ function SubmitPage() {
                 type="submit"
                 className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
               >
-                Submit Event
+                Add Event
               </button>
               <Link
                 to="/"

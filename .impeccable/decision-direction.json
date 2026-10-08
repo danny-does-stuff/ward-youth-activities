@@ -1,0 +1,197 @@
+{
+  "title": "Choose the visual world",
+  "question": "The roll assigned Recital Program. Keep it, take an alternate, or re-roll.",
+  "buildPath": {
+    "value": "code",
+    "toggle": true
+  },
+  "canon": true,
+  "steer": true,
+  "reroll": {
+    "registers": ["safer", "bolder"]
+  },
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A clean mobile event list with cards, a blue Add button, and a calendar icon on every row.",
+    "palette": ["#f8fafc", "#0f172a", "#2563eb", "#e2e8f0"],
+    "materials": ["rounded cards", "system sans", "soft drop shadows"],
+    "viewport": "Stacked event cards, search at top, primary button bottom-right — the Eventbrite/Meetup arrangement at full craft.",
+    "risk": "Indistinguishable from every other community calendar by design.",
+    "comp": ".impeccable/mocks/decision/canon.webp"
+  },
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Recital Program",
+      "kicker": "THE ROLL",
+      "lineage": "Folded choir and school recital inserts with named performers and clock times",
+      "thesis": "This week is a printed program: day as movement, event as billed piece, youth as the names under the title.",
+      "palette": ["#f6f0e4", "#2a2118", "#9b2335", "#1f6b4a"],
+      "materials": ["ivory program stock", "hairline rules", "one crimson ink", "one field-green ink for games"],
+      "viewport": "Phone: a program header (Celina Ward, This week), then SATURDAY as a movement title, compact billed rows, Add event in thumb reach.",
+      "risk": "Can feel like church stationery if the green/crimson pairing goes timid and games look like hymns.",
+      "raised": [
+        {
+          "from": "vertical video feed",
+          "raise": "An opened event owns the viewport; the rest of the program recedes until you close it."
+        },
+        {
+          "from": "Emigre bitmap specimen",
+          "raise": "One type family at stepped sizes: day, title, youth names, clock — no extra chrome for hierarchy."
+        },
+        {
+          "from": "Labanotation",
+          "raise": "Each row carries a duration measure so a two-hour game does not look like a ten-minute number."
+        },
+        {
+          "from": "variable font specimen",
+          "raise": "Scale contrast alone does the work; no eyebrows, no icon-and-label stacks."
+        }
+      ],
+      "comp": ".impeccable/mocks/decision/assigned.webp",
+      "wireframe": {
+        "cols": 12,
+        "rows": 16,
+        "regions": [
+          { "label": "program header", "x": 0, "y": 0, "w": 12, "h": 2, "accent": true },
+          { "label": "this week", "x": 0, "y": 2, "w": 8, "h": 1 },
+          { "label": "add event", "x": 8, "y": 2, "w": 4, "h": 1, "accent": true },
+          { "label": "SATURDAY", "x": 0, "y": 4, "w": 12, "h": 1 },
+          { "label": "event + duration", "x": 0, "y": 5, "w": 12, "h": 2 },
+          { "label": "event + duration", "x": 0, "y": 7, "w": 12, "h": 2 },
+          { "label": "LATER", "x": 0, "y": 10, "w": 12, "h": 1 },
+          { "label": "event row", "x": 0, "y": 11, "w": 12, "h": 2 },
+          { "label": "thumb nav", "x": 0, "y": 14, "w": 12, "h": 2 }
+        ]
+      }
+    },
+    {
+      "id": "model-pick",
+      "label": "Fridge Calendar",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "Kitchen command-center pads and magnet calendars",
+      "thesis": "The family fridge: this week is already on the door, thumb-smeared, with the next game written in marker.",
+      "palette": ["#f4f1ea", "#d4452a", "#1e4d8c", "#f0d24a"],
+      "materials": ["enamel white", "magnet strips", "marker ink", "yellow stickies"],
+      "viewport": "A weekly pad filling the phone: days as stacked blocks, events handwritten on the lines, Add event as a fat marker button.",
+      "risk": "This is the familiar landing for a family calendar — effective, and the direction most runs in this category choose.",
+      "comp": ".impeccable/mocks/decision/model-pick.webp",
+      "wireframe": {
+        "cols": 12,
+        "rows": 16,
+        "regions": [
+          { "label": "magnet bar", "x": 0, "y": 0, "w": 12, "h": 2, "accent": true },
+          { "label": "this week pad", "x": 0, "y": 2, "w": 12, "h": 11 },
+          { "label": "add event", "x": 2, "y": 13, "w": 8, "h": 2, "accent": true }
+        ]
+      }
+    },
+    {
+      "id": "challenger-gate-board",
+      "label": "Gate Board",
+      "verdict": "competitive",
+      "lineage": "Segmented boarding pass plus live departure board",
+      "thesis": "Events rank by start time like departures; past ones drop off; an open event is a stub ticket you can file on your calendar.",
+      "palette": ["#ece8df", "#161616", "#c45c12", "#2f5d50"],
+      "materials": ["thermal stub", "split panels", "alert amber", "tabular figures"],
+      "viewport": "A time-ordered board of compact rows; tap a row and it becomes a ticket with Add to calendar as the scan action.",
+      "case": "Holds product clarity (time rank, past drop off, identity-preserving rows) but loses audience identification — an airport is not the ward.",
+      "risk": "Can feel like travel software unless the ticket language stays youth/event, not flight/gate.",
+      "comp": ".impeccable/mocks/decision/challenger-gate-board.webp",
+      "hero": "https://impeccable.style/worlds/cards/vernacular-ephemera-boarding-pass-and-gate-board-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/vernacular-ephemera-boarding-pass-and-gate-board.webp",
+      "wireframe": {
+        "cols": 12,
+        "rows": 16,
+        "regions": [
+          { "label": "board header", "x": 0, "y": 0, "w": 12, "h": 2 },
+          { "label": "time | event | youth", "x": 0, "y": 2, "w": 12, "h": 2, "accent": true },
+          { "label": "time | event | youth", "x": 0, "y": 4, "w": 12, "h": 2 },
+          { "label": "time | event | youth", "x": 0, "y": 6, "w": 12, "h": 2 },
+          { "label": "open ticket", "x": 0, "y": 9, "w": 12, "h": 5, "accent": true }
+        ]
+      }
+    },
+    {
+      "id": "challenger-folio",
+      "label": "Season Folio",
+      "verdict": "competitive",
+      "lineage": "Botanical plates that keep one scale and one baseline across stages",
+      "thesis": "Each day is a plate on a shared baseline; events sit at the same scale so Saturday’s game and Sunday’s choir can be compared at a glance.",
+      "palette": ["#f3ead8", "#3d4f2f", "#9a2f2f", "#6b5844"],
+      "materials": ["cream plates", "hairline sepia rules", "shared baseline", "caption ranks"],
+      "viewport": "Day plates banded on one line; titles and youth names as captions under each specimen row, not inside cards.",
+      "case": "Holds product clarity (comparable rows, shared measure) but families do not identify with a botanical folio.",
+      "risk": "Garden-plate romance can smother the schedule job if plates become illustration instead of days.",
+      "comp": ".impeccable/mocks/decision/challenger-folio.webp",
+      "hero": "https://impeccable.style/worlds/cards/editorial-sequence-montage-botanical-folio-season-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/editorial-sequence-montage-botanical-folio-season.webp",
+      "wireframe": {
+        "cols": 12,
+        "rows": 16,
+        "regions": [
+          { "label": "folio header", "x": 0, "y": 0, "w": 12, "h": 2 },
+          { "label": "SAT plate", "x": 0, "y": 3, "w": 12, "h": 4, "accent": true },
+          { "label": "SUN plate", "x": 0, "y": 8, "w": 12, "h": 4 },
+          { "label": "captions", "x": 0, "y": 13, "w": 12, "h": 2 }
+        ]
+      }
+    },
+    {
+      "id": "challenger-vertical-feed",
+      "label": "One-event feed",
+      "verdict": "declined",
+      "lineage": "Full-bleed vertical media with a right-rail of actions",
+      "thesis": "One event fills the phone; the next is one snap away.",
+      "palette": ["#0a0a0a", "#ffffff", "#ff2d55"],
+      "materials": ["full-bleed media", "bottom scrim", "white glyphs"],
+      "viewport": "A single event owns the screen; Add to calendar and Add youth sit in a right rail.",
+      "case": "Parents cannot scan this week; a feed hides the schedule.",
+      "kept": "Opened-event owns the viewport.",
+      "risk": "Reads as social video, not a ward calendar.",
+      "hero": "https://impeccable.style/worlds/cards/pop-culture-shelf-vertical-video-feed-surface-hero.webp"
+    },
+    {
+      "id": "challenger-emigre",
+      "label": "Bitmap specimen",
+      "verdict": "declined",
+      "lineage": "Emigre coarse pixel letterforms at poster scale",
+      "thesis": "The week set in proud low-resolution display type.",
+      "palette": ["#f4f1e8", "#111111", "#e23b2e"],
+      "materials": ["newsprint", "pixel display", "dot-matrix"],
+      "viewport": "A towering pixel day-name over dense event columns.",
+      "case": "Families do not identify with type-foundry specimens; bitmap type hurts clock times.",
+      "kept": "One face at many sizes.",
+      "risk": "Novelty type over the scan job.",
+      "hero": "https://impeccable.style/worlds/cards/emigre-bitmap-specimen-hero.webp"
+    },
+    {
+      "id": "challenger-laban",
+      "label": "Dance score",
+      "verdict": "declined",
+      "lineage": "Labanotation staff read upward, duration as block length",
+      "thesis": "The week as a vertical score where each event’s height is how long it lasts.",
+      "palette": ["#f7f5f0", "#111111", "#c8c2b4"],
+      "materials": ["score paper", "symbol blocks", "center staff"],
+      "viewport": "A center staff with events as duration blocks; time flowing upward.",
+      "case": "Time-upward fights how a parent reads a calendar.",
+      "kept": "Duration as a visible measure.",
+      "risk": "Illegible as a family tool.",
+      "hero": "https://impeccable.style/worlds/cards/notation-diagram-systems-labanotation-hero.webp"
+    },
+    {
+      "id": "challenger-specimen",
+      "label": "Live type specimen",
+      "verdict": "declined",
+      "lineage": "Interactive variable-font specimen",
+      "thesis": "Hierarchy by scale contrast alone, with the week’s names as the specimen.",
+      "palette": ["#fafafa", "#111111", "#3b5bdb"],
+      "materials": ["near-white paper", "ink black", "enormous display"],
+      "viewport": "A giant day letter; events as a glyph grid underneath.",
+      "case": "A foundry page is not a schedule; the job disappears.",
+      "kept": "Scale contrast without extra chrome.",
+      "risk": "Looks like a type demo.",
+      "hero": "https://impeccable.style/worlds/cards/variable-font-specimen-hero.webp"
+    }
+  ]
+}

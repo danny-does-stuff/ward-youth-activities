@@ -18,6 +18,7 @@ export const events = sqliteTable('events', {
   notes: text('notes'),
   approved: integer('approved', { mode: 'boolean' }).notNull().default(false),
   created_at: text('created_at').notNull(),
+  tz_version: integer('tz_version').notNull().default(0),
 })
 
 export const youths = sqliteTable('youths', {

@@ -12,10 +12,12 @@ import {
   requireAdmin,
 } from '../lib/auth.server'
 import { addYouthFn } from '../lib/event-actions'
+import { eventWhenSchema, type EventWhenInput } from '../lib/event-form'
 import {
   getAdminEvents,
   getKnownYouthNames,
   removeEvent,
+  updateEventWhen,
 } from '../lib/events.server'
 import { groupByDay, isUpcoming } from '../lib/schedule'
 
@@ -67,6 +69,23 @@ const deleteFn = createServerFn({ method: 'POST' })
     return removeEvent(data.id)
   })
 
+const updateWhenFn = createServerFn({ method: 'POST' })
+  .validator((data: { id: number } & EventWhenInput) => {
+    return z.object({ id: z.number() }).and(eventWhenSchema).parse(data)
+  })
+  .handler(async ({ data }) => {
+    await requireAdmin()
+    const event = await updateEventWhen(data.id, {
+      date: data.date,
+      start_time: data.start_time,
+      end_time: data.end_time,
+    })
+    if (!event) {
+      throw new Error('Event not found')
+    }
+    return event
+  })
+
 export const Route = createFileRoute('/admin')({
   component: AdminPage,
   loader: async () => await getAdminPage(),
@@ -106,6 +125,11 @@ function AdminPage() {
     await router.invalidate()
   }
 
+  async function handleEditWhen(id: number, when: EventWhenInput) {
+    await updateWhenFn({ data: { id, ...when } })
+    await router.invalidate()
+  }
+
   async function handleAddYouth(eventId: number, name: string) {
     await addYouthFn({ data: { eventId, name } })
     await router.invalidate()
@@ -122,7 +146,7 @@ function AdminPage() {
             Leaders
           </h1>
           <p className="mt-2 text-[var(--muted)]">
-            Sign in to take down an event that shouldn’t be here.
+            Sign in to fix a time or take down an event that shouldn’t be here.
           </p>
           {error && (
             <p className="mt-4 text-[var(--danger)]" role="alert">
@@ -158,7 +182,7 @@ function AdminPage() {
               Leaders
             </h1>
             <p className="mt-1 text-[var(--muted)]">
-              New posts already show on the schedule. Delete only what was a mistake.
+              New posts already show on the schedule. Edit a time or delete a mistake.
             </p>
           </div>
           <button
@@ -188,6 +212,7 @@ function AdminPage() {
                 knownYouthNames={knownYouthNames}
                 onAddYouth={handleAddYouth}
                 onDelete={handleDelete}
+                onEditWhen={handleEditWhen}
               />
             ))
           )}
@@ -203,6 +228,7 @@ function AdminPage() {
                 knownYouthNames={knownYouthNames}
                 onAddYouth={handleAddYouth}
                 onDelete={handleDelete}
+                onEditWhen={handleEditWhen}
               />
             ))}
           </section>

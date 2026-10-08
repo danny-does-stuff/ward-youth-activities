@@ -1,4 +1,5 @@
 import { EventCard } from './EventCard'
+import type { EventWhenInput } from '../lib/event-form'
 import type { DayGroup } from '../lib/schedule'
 
 export function EventDayPad({
@@ -7,12 +8,14 @@ export function EventDayPad({
   knownYouthNames,
   onAddYouth,
   onDelete,
+  onEditWhen,
 }: {
   group: DayGroup
   highlightId?: number
   knownYouthNames: Array<string>
   onAddYouth: (eventId: number, name: string) => Promise<void>
   onDelete?: (eventId: number) => Promise<void>
+  onEditWhen?: (eventId: number, when: EventWhenInput) => Promise<void>
 }) {
   return (
     <div className="pad overflow-hidden rounded-sm">
@@ -28,6 +31,9 @@ export function EventDayPad({
             knownYouthNames={knownYouthNames}
             onAddYouth={(name) => onAddYouth(event.id, name)}
             onDelete={onDelete ? () => onDelete(event.id) : undefined}
+            onEditWhen={
+              onEditWhen ? (when) => onEditWhen(event.id, when) : undefined
+            }
           />
         ))}
       </div>

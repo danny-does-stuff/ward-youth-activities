@@ -2,6 +2,7 @@ import { eq, inArray, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { env } from 'cloudflare:workers'
 import { eventYouth, events, youths } from '../db/schema'
+import { reinterpretUtcWallAsWard } from './schedule'
 import type { YouthEvent } from './types'
 
 function getDb() {
@@ -78,11 +79,36 @@ async function namesByEventId(
   return names
 }
 
+async function withChicagoTimes(
+  rows: Array<typeof events.$inferSelect>,
+): Promise<Array<typeof events.$inferSelect>> {
+  const db = getDb()
+  const next: Array<typeof events.$inferSelect> = []
+  for (const row of rows) {
+    if (row.tz_version !== 0) {
+      next.push(row)
+      continue
+    }
+    const [updated] = await db
+      .update(events)
+      .set({
+        starts_at: reinterpretUtcWallAsWard(row.starts_at),
+        ends_at: reinterpretUtcWallAsWard(row.ends_at),
+        tz_version: 1,
+      })
+      .where(eq(events.id, row.id))
+      .returning()
+    next.push(updated ?? row)
+  }
+  return next
+}
+
 async function withYouthNames(
   rows: Array<typeof events.$inferSelect>,
 ): Promise<Array<YouthEvent>> {
-  const names = await namesByEventId(rows.map((row) => row.id))
-  return rows.map((row) => toYouthEvent(row, names.get(row.id) ?? []))
+  const corrected = await withChicagoTimes(rows)
+  const names = await namesByEventId(corrected.map((row) => row.id))
+  return corrected.map((row) => toYouthEvent(row, names.get(row.id) ?? []))
 }
 
 export async function listYouthNames(): Promise<Array<string>> {
@@ -172,6 +198,7 @@ export async function insertEvent(
       notes: event.notes,
       approved: event.approved,
       created_at,
+      tz_version: 1,
     })
     .returning()
 
@@ -199,6 +226,24 @@ export async function addYouthToEvent(
   const youth = await findOrCreateYouth(name)
   await attachYouth(eventId, youth.id)
   return getEventById(eventId)
+}
+
+export async function updateEventTimes(
+  id: number,
+  starts_at: string,
+  ends_at: string,
+): Promise<YouthEvent | null> {
+  const existing = await getEventById(id)
+  if (!existing) {
+    return null
+  }
+
+  await getDb()
+    .update(events)
+    .set({ starts_at, ends_at, tz_version: 1 })
+    .where(eq(events.id, id))
+
+  return getEventById(id)
 }
 
 export async function deleteEvent(id: number): Promise<boolean> {

@@ -12,7 +12,7 @@ Primary: parents and families in Celina Ward opening the site on a phone to see 
 
 Secondary: the same families (and youth leaders) posting an event when a game or performance is scheduled. Youth may be named on events and added later; they are not a separate logged-in audience.
 
-Occasional: a trusted leader using `/admin` with a password to delete a mistaken event. Nobody is expected to monitor an approval queue.
+Occasional: a trusted leader using `/admin` with a password to fix a time or delete a mistaken event. Nobody is expected to monitor an approval queue.
 
 ## Product Purpose
 
@@ -32,10 +32,10 @@ Used mostly on phones (gym, carpool, church foyer, kitchen). Typical moment: “
 - Submit: title, at least one youth, one or more dates with start time and optional end; place and address per date (a new date copies the last one’s times and place); optional shared contact and notes.
 - Add a youth name to an existing event; known names autocomplete.
 - Add an event to a personal calendar (.ics and Google Calendar).
-- Admin: password sign-in and delete. Approval/unpublish is not part of the product job; leftover `approved` values may remain unused.
+- Admin: password sign-in, edit an event’s date and times, and delete. Approval/unpublish is not part of the product job; leftover `approved` values may remain unused.
 - Stack: TanStack Start (React) on Cloudflare Workers, D1, Drizzle, Tailwind. Production deploys from GitHub Actions on `main`.
 - Ward display name comes from `WARD_NAME` (Celina Ward).
-- Terminology: event, youth, this week, add event, add to calendar, delete.
+- Terminology: event, youth, this week, add event, add to calendar, edit, delete.
 
 Undecided: whether past events appear anywhere after they end (home hides them).
 

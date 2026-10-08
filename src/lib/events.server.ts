@@ -4,6 +4,7 @@ import {
   insertEvent,
   listEvents,
   listYouthNames,
+  updateEventTimes,
 } from './db.server'
 import { isUpcoming, localDateTime, sortByStart } from './schedule'
 import type { YouthEvent } from './types'
@@ -89,4 +90,12 @@ export async function addYouth(
 
 export async function removeEvent(id: number): Promise<boolean> {
   return deleteEvent(id)
+}
+
+export async function updateEventWhen(
+  eventId: number,
+  occurrence: CreateEventOccurrence,
+): Promise<YouthEvent | null> {
+  const { starts_at, ends_at } = occurrenceTimes(occurrence)
+  return updateEventTimes(eventId, starts_at, ends_at)
 }

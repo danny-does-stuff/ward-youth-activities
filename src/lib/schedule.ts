@@ -228,8 +228,31 @@ export function formatParticipantNames(names: Array<string>): string {
   return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`
 }
 
+function pad2(value: number): string {
+  return String(value).padStart(2, '0')
+}
+
 export function localDateTime(date: string, time: string): Date {
-  return new Date(`${date}T${time}:00`)
+  const [year, month, day] = date.split('-').map(Number)
+  const [hour, minute] = time.split(':').map(Number)
+  const wallAsUtc = Date.UTC(year, month - 1, day, hour, minute, 0)
+  const guessed = new Date(wallAsUtc - wardOffsetMs(new Date(wallAsUtc)))
+  return new Date(wallAsUtc - wardOffsetMs(guessed))
+}
+
+export function wallDateTime(iso: string): { date: string; time: string } {
+  const wall = wardParts(new Date(iso))
+  return {
+    date: `${wall.year}-${pad2(wall.month)}-${pad2(wall.day)}`,
+    time: `${pad2(wall.hour)}:${pad2(wall.minute)}`,
+  }
+}
+
+export function reinterpretUtcWallAsWard(iso: string): string {
+  const instant = new Date(iso)
+  const date = `${instant.getUTCFullYear()}-${pad2(instant.getUTCMonth() + 1)}-${pad2(instant.getUTCDate())}`
+  const time = `${pad2(instant.getUTCHours())}:${pad2(instant.getUTCMinutes())}`
+  return localDateTime(date, time).toISOString()
 }
 
 export function formatPlace(

@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "celina-youth-activities",
+  "account_id": "17276b4a174c452ff88d8c9219a126cb",
+  "compatibility_date": "2026-10-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "@tanstack/react-start/server-entry",
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "WARD_NAME": "Celina Ward"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "celina-youth-activities",
+      "database_id": "fcaf2f0b-3f1f-4d81-9294-9f61058bfe33",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

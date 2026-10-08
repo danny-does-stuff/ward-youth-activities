@@ -1,5 +1,3 @@
-import { createServerFn } from '@tanstack/react-start'
-import { z } from 'zod'
 import {
   addYouthToEvent,
   deleteEvent,
@@ -69,20 +67,3 @@ export async function addYouth(
 export async function removeEvent(id: number): Promise<boolean> {
   return deleteEvent(id)
 }
-
-export const addYouthFn = createServerFn({ method: 'POST' })
-  .validator((data: { eventId: number; name: string }) => {
-    return z
-      .object({
-        eventId: z.number(),
-        name: z.string().trim().min(1, 'Youth name is required'),
-      })
-      .parse(data)
-  })
-  .handler(async ({ data }) => {
-    const event = await addYouth(data.eventId, data.name)
-    if (!event) {
-      throw new Error('Event not found')
-    }
-    return event
-  })

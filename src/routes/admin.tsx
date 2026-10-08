@@ -11,8 +11,8 @@ import {
   logoutAdmin,
   requireAdmin,
 } from '../lib/auth.server'
+import { addYouthFn } from '../lib/event-actions'
 import {
-  addYouthFn,
   getAdminEvents,
   getKnownYouthNames,
   removeEvent,

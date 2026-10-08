@@ -4,11 +4,8 @@ import { z } from 'zod'
 import { EventDayPad } from '../components/EventDayPad'
 import { SiteChrome } from '../components/SiteChrome'
 import { getWardName } from '../lib/auth.server'
-import {
-  addYouthFn,
-  getKnownYouthNames,
-  getUpcomingEvents,
-} from '../lib/events.server'
+import { addYouthFn } from '../lib/event-actions'
+import { getKnownYouthNames, getUpcomingEvents } from '../lib/events.server'
 import { groupByWeek } from '../lib/schedule'
 
 const homeSearch = z.object({

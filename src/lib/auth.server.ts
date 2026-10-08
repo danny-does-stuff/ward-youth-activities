@@ -47,7 +47,7 @@ async function sessionToken(password: string): Promise<string> {
 }
 
 export function getWardName(): string {
-  return env.WARD_NAME.trim() || 'Ward Youth Activities'
+  return env.WARD_NAME.trim() || 'Ward'
 }
 
 export async function isAdminAuthenticated(): Promise<boolean> {

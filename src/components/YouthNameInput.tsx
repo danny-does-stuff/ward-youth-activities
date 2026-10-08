@@ -1,8 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 
-const inputClassName =
-  'w-full px-4 py-3 rounded-lg border border-white/20 bg-white/10 backdrop-blur-sm text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent'
-
 export function YouthNameInput({
   id,
   value,
@@ -33,18 +30,6 @@ export function YouthNameInput({
   }, [knownNames, value])
 
   const showList = open && suggestions.length > 0
-
-  useEffect(() => {
-    const input = inputRef.current
-    if (!input) return
-
-    function handleBlur() {
-      setOpen(false)
-    }
-
-    input.addEventListener('blur', handleBlur)
-    return () => input.removeEventListener('blur', handleBlur)
-  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -98,7 +83,7 @@ export function YouthNameInput({
   }
 
   return (
-    <div ref={rootRef} className="w-full">
+    <div ref={rootRef} className="relative w-full">
       <input
         ref={inputRef}
         type="text"
@@ -121,21 +106,18 @@ export function YouthNameInput({
           setOpen(true)
           setHighlight(0)
         }}
-        onClick={() => {
-          setOpen(true)
-          setHighlight(0)
-        }}
+        onBlur={() => setOpen(false)}
         onKeyDown={handleKeyDown}
         required={required}
         autoComplete="off"
-        className={inputClassName}
+        className="field"
         placeholder={placeholder}
       />
       {showList && (
         <ul
           id={listId}
           role="listbox"
-          className="mt-1 max-h-48 overflow-auto rounded-lg border border-white/20 bg-zinc-900 py-1 shadow-xl"
+          className="absolute z-20 mt-1 max-h-48 w-full overflow-auto border-2 border-[var(--ink)] bg-[var(--pad)] py-1 shadow-[var(--shadow)]"
         >
           {suggestions.map((name, index) => (
             <li key={name} role="presentation">
@@ -145,10 +127,10 @@ export function YouthNameInput({
                 id={`${listId}-option-${index}`}
                 role="option"
                 aria-selected={index === highlight}
-                className={`block w-full px-4 py-2 text-left text-sm ${
+                className={`block w-full px-3 py-2 text-left text-sm ${
                   index === highlight
-                    ? 'bg-blue-500 text-white'
-                    : 'text-white/90 hover:bg-white/10'
+                    ? 'bg-[var(--sticky)] text-[var(--sticky-ink)]'
+                    : 'text-[var(--ink)]'
                 }`}
                 onMouseDown={(e) => {
                   e.preventDefault()

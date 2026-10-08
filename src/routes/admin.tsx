@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
-import { EventCard } from '../components/EventCard'
+import { EventDayPad } from '../components/EventDayPad'
+import { SiteChrome } from '../components/SiteChrome'
 import {
   getWardName,
   isAdminAuthenticated,
@@ -11,23 +12,32 @@ import {
   requireAdmin,
 } from '../lib/auth.server'
 import {
-  addYouth,
-  approveEvent,
+  addYouthFn,
   getAdminEvents,
   getKnownYouthNames,
-  rejectEvent,
-  unpublishEvent,
+  removeEvent,
 } from '../lib/events.server'
-import { PageShell } from '../lib/page'
-import type { YouthEvent } from '../lib/types'
+import { groupByDay, isUpcoming } from '../lib/schedule'
 
 const getAdminPage = createServerFn({ method: 'GET' }).handler(async () => {
   const authenticated = await isAdminAuthenticated()
+  if (!authenticated) {
+    return {
+      authenticated,
+      wardName: getWardName(),
+      events: [],
+      knownYouthNames: [],
+    }
+  }
+  const [events, knownYouthNames] = await Promise.all([
+    getAdminEvents(),
+    getKnownYouthNames(),
+  ])
   return {
     authenticated,
     wardName: getWardName(),
-    events: authenticated ? await getAdminEvents() : [],
-    knownYouthNames: authenticated ? await getKnownYouthNames() : [],
+    events,
+    knownYouthNames,
   }
 })
 
@@ -48,49 +58,13 @@ const logoutFn = createServerFn({ method: 'POST' }).handler(() => {
   return { ok: true }
 })
 
-const approveFn = createServerFn({ method: 'POST' })
+const deleteFn = createServerFn({ method: 'POST' })
   .validator((data: { id: number }) => {
     return z.object({ id: z.number() }).parse(data)
   })
   .handler(async ({ data }) => {
     await requireAdmin()
-    return approveEvent(data.id)
-  })
-
-const unpublishFn = createServerFn({ method: 'POST' })
-  .validator((data: { id: number }) => {
-    return z.object({ id: z.number() }).parse(data)
-  })
-  .handler(async ({ data }) => {
-    await requireAdmin()
-    return unpublishEvent(data.id)
-  })
-
-const rejectFn = createServerFn({ method: 'POST' })
-  .validator((data: { id: number }) => {
-    return z.object({ id: z.number() }).parse(data)
-  })
-  .handler(async ({ data }) => {
-    await requireAdmin()
-    return rejectEvent(data.id)
-  })
-
-const addYouthFn = createServerFn({ method: 'POST' })
-  .validator((data: { eventId: number; name: string }) => {
-    return z
-      .object({
-        eventId: z.number(),
-        name: z.string().trim().min(1, 'Youth name is required'),
-      })
-      .parse(data)
-  })
-  .handler(async ({ data }) => {
-    await requireAdmin()
-    const event = await addYouth(data.eventId, data.name)
-    if (!event) {
-      throw new Error('Event not found')
-    }
-    return event
+    return removeEvent(data.id)
   })
 
 export const Route = createFileRoute('/admin')({
@@ -105,8 +79,10 @@ function AdminPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const pending = events.filter((event) => !event.approved)
-  const published = events.filter((event) => event.approved)
+  const upcoming = groupByDay(events.filter((event) => isUpcoming(event)))
+  const past = groupByDay(
+    events.filter((event) => !isUpcoming(event)),
+  ).reverse()
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -116,7 +92,7 @@ function AdminPage() {
       setPassword('')
       await router.invalidate()
     } catch {
-      setError('Invalid password')
+      setError('That password did not match. Try again.')
     }
   }
 
@@ -125,18 +101,8 @@ function AdminPage() {
     await router.invalidate()
   }
 
-  async function handleApprove(id: number) {
-    await approveFn({ data: { id } })
-    await router.invalidate()
-  }
-
-  async function handleUnpublish(id: number) {
-    await unpublishFn({ data: { id } })
-    await router.invalidate()
-  }
-
-  async function handleReject(id: number) {
-    await rejectFn({ data: { id } })
+  async function handleDelete(id: number) {
+    await deleteFn({ data: { id } })
     await router.invalidate()
   }
 
@@ -147,168 +113,101 @@ function AdminPage() {
 
   if (!authenticated) {
     return (
-      <PageShell>
-        <div className="max-w-md mx-auto py-16">
-          <Link
-            to="/"
-            className="text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            ← Back to Events
+      <SiteChrome wardName={wardName} current="admin">
+        <div className="mx-auto max-w-md">
+          <Link to="/" className="marker-link">
+            Schedule
           </Link>
-          <div className="mt-6 p-8 rounded-xl backdrop-blur-md bg-black/50 shadow-xl border-8 border-black/10">
-            <h1 className="text-3xl font-bold mb-2">Admin</h1>
-            <p className="text-white/70 mb-6">
-              Sign in to review {wardName} event submissions.
+          <h1 className="mt-6 font-display text-4xl text-[var(--magnet)]">
+            Leaders
+          </h1>
+          <p className="mt-2 text-[var(--muted)]">
+            Sign in to take down an event that shouldn’t be here.
+          </p>
+          {error && (
+            <p className="mt-4 text-[var(--danger)]" role="alert">
+              {error}
             </p>
-            {error && (
-              <div className="mb-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200">
-                {error}
-              </div>
-            )}
-            <form onSubmit={handleLogin} className="space-y-4">
-              <label htmlFor="password" className="block text-sm font-medium">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-white/20 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
-              <button
-                type="submit"
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-              >
-                Sign in
-              </button>
-            </form>
-          </div>
+          )}
+          <form onSubmit={handleLogin} className="mt-6 space-y-4">
+            <label htmlFor="password" className="block text-sm font-extrabold">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="field"
+            />
+            <button type="submit" className="sticky-btn w-full">
+              Sign in
+            </button>
+          </form>
         </div>
-      </PageShell>
+      </SiteChrome>
     )
   }
 
   return (
-    <PageShell>
-      <div className="max-w-4xl mx-auto py-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+    <SiteChrome wardName={wardName} current="admin">
+      <div className="mx-auto max-w-xl space-y-8">
+        <div className="flex items-end justify-between gap-3">
           <div>
-            <h1 className="text-4xl font-bold mb-2">{wardName} Admin</h1>
-            <p className="text-white/70">Review and publish submitted events</p>
+            <h1 className="font-display text-4xl text-[var(--magnet)]">
+              Leaders
+            </h1>
+            <p className="mt-1 text-[var(--muted)]">
+              New posts already show on the schedule. Delete only what was a mistake.
+            </p>
           </div>
-          <div className="flex gap-3">
-            <Link
-              to="/"
-              className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-            >
-              View site
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-            >
-              Sign out
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="min-h-11 font-extrabold"
+          >
+            Sign out
+          </button>
         </div>
 
-        <section className="mb-10">
-          <h2 className="text-2xl font-semibold mb-4">
-            Pending ({pending.length})
-          </h2>
-          {pending.length === 0 ? (
-            <p className="text-white/60">No submissions waiting for review.</p>
+        <Link to="/" className="marker-link">
+          View the schedule
+        </Link>
+
+        <section className="space-y-4">
+          <h2 className="font-display text-3xl">On the schedule</h2>
+          {upcoming.length === 0 ? (
+            <p className="text-[var(--muted)]">
+              Nothing upcoming. The public schedule is empty too.
+            </p>
           ) : (
-            <div className="grid gap-4">
-              {pending.map((event) => (
-                <AdminEventCard
-                  key={event.id}
-                  event={event}
-                  knownYouthNames={knownYouthNames}
-                  onAddYouth={(name) => handleAddYouth(event.id, name)}
-                  onApprove={() => handleApprove(event.id)}
-                  onReject={() => handleReject(event.id)}
-                />
-              ))}
-            </div>
+            upcoming.map((group) => (
+              <EventDayPad
+                key={group.key}
+                group={group}
+                knownYouthNames={knownYouthNames}
+                onAddYouth={handleAddYouth}
+                onDelete={handleDelete}
+              />
+            ))
           )}
         </section>
 
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">
-            Published ({published.length})
-          </h2>
-          {published.length === 0 ? (
-            <p className="text-white/60">No published events yet.</p>
-          ) : (
-            <div className="grid gap-4">
-              {published.map((event) => (
-                <AdminEventCard
-                  key={event.id}
-                  event={event}
-                  knownYouthNames={knownYouthNames}
-                  onAddYouth={(name) => handleAddYouth(event.id, name)}
-                  onUnpublish={() => handleUnpublish(event.id)}
-                  onReject={() => handleReject(event.id)}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
-    </PageShell>
-  )
-}
-
-function AdminEventCard({
-  event,
-  knownYouthNames,
-  onAddYouth,
-  onApprove,
-  onUnpublish,
-  onReject,
-}: {
-  event: YouthEvent
-  knownYouthNames: Array<string>
-  onAddYouth: (name: string) => Promise<void>
-  onApprove?: () => void
-  onUnpublish?: () => void
-  onReject?: () => void
-}) {
-  return (
-    <div className="space-y-3">
-      <EventCard
-        event={event}
-        knownYouthNames={knownYouthNames}
-        onAddYouth={onAddYouth}
-      />
-      <div className="flex flex-wrap gap-3">
-        {onApprove && (
-          <button
-            onClick={onApprove}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
-          >
-            Approve
-          </button>
-        )}
-        {onUnpublish && (
-          <button
-            onClick={onUnpublish}
-            className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold py-2 px-4 rounded-lg transition-colors"
-          >
-            Unpublish
-          </button>
-        )}
-        {onReject && (
-          <button
-            onClick={onReject}
-            className="bg-red-500/80 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition-colors"
-          >
-            Delete
-          </button>
+        {past.length > 0 && (
+          <section className="space-y-4">
+            <h2 className="font-display text-3xl">Past</h2>
+            {past.map((group) => (
+              <EventDayPad
+                key={group.key}
+                group={group}
+                knownYouthNames={knownYouthNames}
+                onAddYouth={handleAddYouth}
+                onDelete={handleDelete}
+              />
+            ))}
+          </section>
         )}
       </div>
-    </div>
+    </SiteChrome>
   )
 }

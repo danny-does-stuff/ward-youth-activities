@@ -1,98 +1,99 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
-import { EventCard } from '../components/EventCard'
+import { EventDayPad } from '../components/EventDayPad'
+import { SiteChrome } from '../components/SiteChrome'
 import { getWardName } from '../lib/auth.server'
 import {
-  addYouth,
-  getApprovedEvents,
+  addYouthFn,
   getKnownYouthNames,
+  getUpcomingEvents,
 } from '../lib/events.server'
-import { PageShell } from '../lib/page'
+import { groupByWeek } from '../lib/schedule'
+
+const homeSearch = z.object({
+  event: z.coerce.number().optional(),
+})
 
 const getHomeData = createServerFn({
   method: 'GET',
-}).handler(async () => ({
-  events: await getApprovedEvents(),
-  knownYouthNames: await getKnownYouthNames(),
-  wardName: getWardName(),
-}))
-
-const addYouthFn = createServerFn({ method: 'POST' })
-  .validator((data: { eventId: number; name: string }) => {
-    return z
-      .object({
-        eventId: z.number(),
-        name: z.string().trim().min(1, 'Youth name is required'),
-      })
-      .parse(data)
-  })
-  .handler(async ({ data }) => {
-    const event = await addYouth(data.eventId, data.name)
-    if (!event) {
-      throw new Error('Event not found')
-    }
-    return event
-  })
+}).handler(async () => {
+  const [events, knownYouthNames] = await Promise.all([
+    getUpcomingEvents(),
+    getKnownYouthNames(),
+  ])
+  return {
+    events,
+    knownYouthNames,
+    wardName: getWardName(),
+    now: new Date().toISOString(),
+  }
+})
 
 export const Route = createFileRoute('/')({
   component: Home,
+  validateSearch: (search) => homeSearch.parse(search),
   loader: async () => await getHomeData(),
 })
 
 function Home() {
   const router = useRouter()
-  const { events, knownYouthNames, wardName } = Route.useLoaderData()
+  const { event: highlightId } = Route.useSearch()
+  const { events, knownYouthNames, wardName, now } = Route.useLoaderData()
+  const weeks = groupByWeek(events, new Date(now))
+
+  async function handleAddYouth(eventId: number, name: string) {
+    await addYouthFn({ data: { eventId, name } })
+    await router.invalidate()
+  }
 
   return (
-    <PageShell>
-      <div className="max-w-4xl mx-auto py-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-4xl font-bold mb-2">{wardName}</h1>
-            <p className="text-white/70">
-              Discover upcoming activities and performances
+    <SiteChrome wardName={wardName} current="home">
+      <div className="space-y-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-prose">
+            <p className="text-3xl font-extrabold leading-tight sm:text-4xl">
+              Come cheer on our youth!
+            </p>
+            <p className="mt-2 text-[var(--muted)]">
+              Games, concerts, and performances, with times and places so you
+              know where to be. Tap an event to add it to your calendar.
             </p>
           </div>
-          <Link
-            to="/submit"
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-lg"
-          >
-            Add Event
+          <Link to="/submit" className="sticky-btn shrink-0 self-start sm:self-end">
+            Add event
           </Link>
         </div>
 
-        {events.length === 0 ? (
-          <div className="bg-white/10 border border-white/20 rounded-lg p-8 text-center backdrop-blur-sm">
-            <p className="text-xl text-white/80 mb-4">
-              No events scheduled yet.
+        {weeks.length === 0 ? (
+          <div className="pad px-4 py-6">
+            <p className="font-extrabold">The schedule is waiting on you.</p>
+            <p className="mt-1 text-[var(--muted)]">
+              Post the next game or concert so families know where to be.
             </p>
-            <p className="text-white/60 mb-6">
-              Be the first to submit an event!
-            </p>
-            <Link
-              to="/submit"
-              className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-            >
-              Add Event
+            <Link to="/submit" className="sticky-btn mt-4">
+              Add event
             </Link>
           </div>
         ) : (
-          <div className="grid gap-4">
-            {events.map((event) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                knownYouthNames={knownYouthNames}
-                onAddYouth={async (name) => {
-                  await addYouthFn({ data: { eventId: event.id, name } })
-                  await router.invalidate()
-                }}
-              />
-            ))}
-          </div>
+          weeks.map((week) => (
+            <section key={week.key} className="space-y-3">
+              <h2 className="font-display text-3xl text-[var(--magnet)]">
+                {week.label}
+              </h2>
+              {week.days.map((group) => (
+                <EventDayPad
+                  key={group.key}
+                  group={group}
+                  highlightId={highlightId}
+                  knownYouthNames={knownYouthNames}
+                  onAddYouth={handleAddYouth}
+                />
+              ))}
+            </section>
+          ))
         )}
       </div>
-    </PageShell>
+    </SiteChrome>
   )
 }

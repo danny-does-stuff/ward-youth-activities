@@ -1,12 +1,13 @@
+import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
 import {
   addYouthToEvent,
   deleteEvent,
   insertEvent,
   listEvents,
-  listEventsNewestFirst,
   listYouthNames,
-  setEventApproved,
 } from './db.server'
+import { isUpcoming, localDateTime, sortByStart } from './schedule'
 import type { YouthEvent } from './types'
 
 export type CreateEventInput = {
@@ -23,14 +24,9 @@ export type CreateEventInput = {
   notes?: string
 }
 
-export async function getApprovedEvents(): Promise<Array<YouthEvent>> {
+export async function getUpcomingEvents(): Promise<Array<YouthEvent>> {
   const events = await listEvents()
-  return events
-    .filter((event) => event.approved)
-    .sort(
-      (a, b) =>
-        new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
-    )
+  return sortByStart(events.filter((event) => isUpcoming(event)))
 }
 
 export async function getKnownYouthNames(): Promise<Array<string>> {
@@ -38,12 +34,11 @@ export async function getKnownYouthNames(): Promise<Array<string>> {
 }
 
 export async function getAdminEvents(): Promise<Array<YouthEvent>> {
-  return listEventsNewestFirst()
+  return listEvents()
 }
 
 function toUTCTimestamp(date: string, time: string): string {
-  const localDateTime = new Date(`${date}T${time}:00`)
-  return localDateTime.toISOString()
+  return localDateTime(date, time).toISOString()
 }
 
 export async function createEvent(
@@ -60,7 +55,7 @@ export async function createEvent(
     contact_email: input.contact_email?.trim(),
     contact_phone: input.contact_phone?.trim(),
     notes: input.notes?.trim(),
-    approved: false,
+    approved: true,
   })
 }
 
@@ -71,14 +66,23 @@ export async function addYouth(
   return addYouthToEvent(eventId, name)
 }
 
-export async function approveEvent(id: number): Promise<YouthEvent | null> {
-  return setEventApproved(id, true)
-}
-
-export async function unpublishEvent(id: number): Promise<YouthEvent | null> {
-  return setEventApproved(id, false)
-}
-
-export async function rejectEvent(id: number): Promise<boolean> {
+export async function removeEvent(id: number): Promise<boolean> {
   return deleteEvent(id)
 }
+
+export const addYouthFn = createServerFn({ method: 'POST' })
+  .validator((data: { eventId: number; name: string }) => {
+    return z
+      .object({
+        eventId: z.number(),
+        name: z.string().trim().min(1, 'Youth name is required'),
+      })
+      .parse(data)
+  })
+  .handler(async ({ data }) => {
+    const event = await addYouth(data.eventId, data.name)
+    if (!event) {
+      throw new Error('Event not found')
+    }
+    return event
+  })

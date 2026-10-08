@@ -1,15 +1,163 @@
 @import "tailwindcss";
 
-body {
-  @apply m-0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@theme {
+  --font-display: "Permanent Marker", cursive;
+  --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
+:root {
+  color-scheme: light;
+  --bg: #e8e0d2;
+  --ink: #241c16;
+  --muted: #6a5344;
+  --magnet: #d4452a;
+  --magnet-ink: #fff6ee;
+  --marker: #1e4d8c;
+  --sticky: #f0d24a;
+  --sticky-ink: #241c16;
+  --rule: color-mix(in srgb, var(--ink) 14%, transparent);
+  --pad: #faf6ee;
+  --danger: #b42318;
+  --shadow: 0 10px 28px color-mix(in srgb, #241c16 16%, transparent);
+}
+
+html {
+  background: var(--bg);
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01";
+}
+
+::selection {
+  background: var(--sticky);
+  color: var(--sticky-ink);
+}
+
+:focus-visible {
+  outline: 3px solid var(--marker);
+  outline-offset: 3px;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(
+      120% 80% at 10% 0%,
+      color-mix(in srgb, var(--magnet) 18%, transparent),
+      transparent 46%
+    ),
+    var(--bg);
+}
+
+.magnet-bar {
+  width: 100%;
+  background: var(--magnet);
+  color: var(--magnet-ink);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--magnet) 40%, transparent);
+}
+
+.pad {
+  background: var(--pad);
+  box-shadow: var(--shadow);
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(100% - 1px),
+    var(--rule) calc(100% - 1px)
+  );
+}
+
+.field {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.7rem 0.2rem;
+  border: 0;
+  border-bottom: 2px solid var(--rule);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  border-radius: 0;
+}
+
+.field::placeholder {
+  color: color-mix(in srgb, var(--muted) 80%, var(--pad));
+}
+
+.field:focus {
+  outline: none;
+  border-bottom-color: var(--marker);
+}
+
+.sticky-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0.7rem 1.2rem;
+  background: var(--sticky);
+  color: var(--sticky-ink);
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  letter-spacing: 0.01em;
+  border: 0;
+  box-shadow: 2px 5px 10px color-mix(in srgb, var(--ink) 22%, transparent);
+  text-decoration: none;
+}
+
+.sticky-btn:hover {
+  transform: rotate(-1.2deg) translateY(-1px);
+}
+
+.sticky-btn:active {
+  transform: translateY(1px);
+}
+
+.marker-link {
+  color: var(--marker);
+  font-weight: 800;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.thumb-nav {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--pad);
+  border-top: 3px solid var(--ink);
+  padding: 0.4rem 0.6rem calc(0.4rem + env(safe-area-inset-bottom));
+}
+
+.thumb-nav a {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.thumb-nav a[data-active='true'] {
+  color: var(--magnet);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticky-btn:hover {
+    transform: none;
+  }
 }

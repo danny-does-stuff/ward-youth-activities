@@ -1,4 +1,4 @@
-import { desc, eq, inArray, sql } from 'drizzle-orm'
+import { eq, inArray, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { env } from 'cloudflare:workers'
 import { eventYouth, events, youths } from '../db/schema'
@@ -201,24 +201,6 @@ export async function addYouthToEvent(
   return getEventById(eventId)
 }
 
-export async function setEventApproved(
-  id: number,
-  approved: boolean,
-): Promise<YouthEvent | null> {
-  const rows = await getDb()
-    .update(events)
-    .set({ approved })
-    .where(eq(events.id, id))
-    .returning()
-
-  if (rows.length === 0) {
-    return null
-  }
-
-  const [event] = await withYouthNames(rows)
-  return event
-}
-
 export async function deleteEvent(id: number): Promise<boolean> {
   await getDb().delete(eventYouth).where(eq(eventYouth.event_id, id))
   const deleted = await getDb()
@@ -227,13 +209,4 @@ export async function deleteEvent(id: number): Promise<boolean> {
     .returning({ id: events.id })
 
   return deleted.length > 0
-}
-
-export async function listEventsNewestFirst(): Promise<Array<YouthEvent>> {
-  const rows = await getDb()
-    .select()
-    .from(events)
-    .orderBy(desc(events.created_at))
-
-  return withYouthNames(rows)
 }

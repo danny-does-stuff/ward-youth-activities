@@ -1,51 +1,44 @@
+import { CalendarPlus, ChevronDown, MapPin, Trash2, UserPlus } from 'lucide-react'
 import { useState } from 'react'
+import { downloadEventIcs, googleCalendarUrl } from '../lib/calendar'
+import {
+  formatContact,
+  formatParticipantNames,
+  formatPlace,
+  formatTimeRange,
+} from '../lib/schedule'
 import type { YouthEvent } from '../lib/types'
 import { YouthNameInput } from './YouthNameInput'
 
-export function formatParticipantNames(names: Array<string>): string {
-  if (names.length === 0) {
-    return 'Youth TBD'
-  }
-  if (names.length === 1) {
-    return names[0]
-  }
-  if (names.length === 2) {
-    return `${names[0]} and ${names[1]}`
-  }
-  return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`
-}
+const openById = new Map<number, boolean>()
 
 export function EventCard({
   event,
   knownYouthNames = [],
+  defaultOpen = false,
   onAddYouth,
+  onDelete,
 }: {
   event: YouthEvent
   knownYouthNames?: Array<string>
+  defaultOpen?: boolean
   onAddYouth?: (name: string) => Promise<void>
+  onDelete?: () => Promise<void>
 }) {
-  const startDate = new Date(event.starts_at)
-  const endDate = new Date(event.ends_at)
+  const [open, setOpen] = useState(
+    () => openById.get(event.id) ?? defaultOpen,
+  )
+
+  function setOpenAndRemember(next: boolean) {
+    openById.set(event.id, next)
+    setOpen(next)
+  }
   const [addingYouth, setAddingYouth] = useState(false)
   const [youthName, setYouthName] = useState('')
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
-
-  const dateString = startDate.toLocaleDateString('en-US', {
-    weekday: 'short',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-
-  const startTime = startDate.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-  const endTime = endDate.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  })
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   async function handleAddYouth(e: React.FormEvent) {
     e.preventDefault()
@@ -56,130 +49,191 @@ export function EventCard({
       await onAddYouth(youthName)
       setYouthName('')
       setAddingYouth(false)
-    } catch (err) {
-      setAddError(
-        err instanceof Error ? err.message : 'Could not add youth. Try again.',
-      )
+    } catch {
+      setAddError('Could not add youth. Try again.')
     } finally {
       setAdding(false)
     }
   }
 
+  async function handleDelete() {
+    if (!onDelete) return
+    setDeleting(true)
+    try {
+      await onDelete()
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const detailsId = `event-details-${event.id}`
+  const place = formatPlace(event)
+  const contact = formatContact(event)
+
   return (
-    <div className="bg-white/10 border border-white/20 rounded-lg p-4 backdrop-blur-sm shadow-md hover:bg-white/15 transition-colors">
-      <div className="flex flex-col gap-2">
-        <div>
-          <h3 className="text-xl font-bold text-white">{event.title}</h3>
-          <p className="text-sm text-white/70">
+    <article
+      id={`event-${event.id}`}
+      className="border-b border-[var(--rule)] last:border-b-0"
+    >
+      <button
+        type="button"
+        className="flex w-full items-start gap-3 py-2 text-left"
+        aria-expanded={open}
+        aria-controls={detailsId}
+        onClick={() => setOpenAndRemember(!open)}
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-extrabold text-[var(--marker)]">
+            {formatTimeRange(event)}
+          </span>
+          <span className="mt-0.5 block text-lg font-extrabold leading-tight">
+            {event.title}
+          </span>
+          <span className="mt-0.5 block text-sm text-[var(--muted)]">
             {formatParticipantNames(event.participant_names)}
-          </p>
-        </div>
+          </span>
+        </span>
+        <ChevronDown
+          aria-hidden
+          className={`mt-1 h-5 w-5 shrink-0 text-[var(--muted)] transition-transform duration-200 ease-out ${
+            open ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
 
-        <div className="flex flex-col gap-1 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-white/60">📅</span>
-            <span className="text-white">{dateString}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-white/60">⏰</span>
-            <span className="text-white">
-              {startTime} - {endTime}
-            </span>
-          </div>
+      <div
+        id={detailsId}
+        hidden={!open}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="space-y-1.5 pb-2">
+            {place && (
+              <p className="flex items-start gap-2 text-sm">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <span>{place}</span>
+              </p>
+            )}
+            {event.notes && <p className="text-sm">{event.notes}</p>}
+            {contact && (
+              <p className="text-sm text-[var(--muted)]">{contact}</p>
+            )}
 
-          {event.location_name && (
-            <div className="flex items-center gap-2">
-              <span className="text-white/60">📍</span>
-              <span className="text-white">{event.location_name}</span>
+            <div className="flex flex-wrap gap-x-3 gap-y-0">
+              <button
+                type="button"
+                className="inline-flex min-h-9 items-center gap-1.5 text-sm font-extrabold text-[var(--marker)]"
+                onClick={() => downloadEventIcs(event)}
+              >
+                <CalendarPlus className="h-4 w-4" aria-hidden />
+                Apple Calendar
+              </button>
+              <a
+                className="inline-flex min-h-9 items-center gap-1.5 text-sm font-extrabold text-[var(--marker)]"
+                href={googleCalendarUrl(event)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <CalendarPlus className="h-4 w-4" aria-hidden />
+                Google Calendar
+              </a>
             </div>
-          )}
 
-          {event.address && (
-            <div className="flex items-center gap-2 ml-6">
-              <span className="text-white/80 text-xs">{event.address}</span>
-            </div>
-          )}
-        </div>
-
-        {event.notes && (
-          <div className="mt-2 pt-2 border-t border-white/10">
-            <p className="text-sm text-white/80">{event.notes}</p>
-          </div>
-        )}
-
-        {(event.contact_name || event.contact_email || event.contact_phone) && (
-          <div className="mt-2 pt-2 border-t border-white/10">
-            <p className="text-xs text-white/60 mb-1">Contact:</p>
-            {event.contact_name && (
-              <p className="text-sm text-white/80">{event.contact_name}</p>
-            )}
-            {event.contact_email && (
-              <p className="text-sm text-white/80">{event.contact_email}</p>
-            )}
-            {event.contact_phone && (
-              <p className="text-sm text-white/80">{event.contact_phone}</p>
-            )}
-          </div>
-        )}
-
-        {onAddYouth && (
-          <div className="mt-2 pt-2 border-t border-white/10">
-            {addingYouth ? (
-              <form onSubmit={handleAddYouth} className="space-y-2">
-                <label
-                  htmlFor={`add-youth-${event.id}`}
-                  className="block text-sm font-medium"
-                >
-                  New youth
-                </label>
-                <YouthNameInput
-                  id={`add-youth-${event.id}`}
-                  value={youthName}
-                  knownNames={knownYouthNames}
-                  required
-                  onChange={(value) => {
-                    setYouthName(value)
-                    setAddError(null)
-                  }}
-                />
-                {addError && (
-                  <p className="text-sm text-red-200">{addError}</p>
-                )}
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="submit"
-                    disabled={adding}
-                    className="bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white font-bold py-2 px-4 rounded-lg transition-colors"
-                  >
-                    {adding ? 'Adding…' : 'Add youth'}
-                  </button>
+            {onAddYouth && (
+              <div>
+                {addingYouth ? (
+                  <form onSubmit={handleAddYouth} className="space-y-1.5">
+                    <label
+                      htmlFor={`add-youth-${event.id}`}
+                      className="block text-sm font-extrabold"
+                    >
+                      Youth name
+                    </label>
+                    <YouthNameInput
+                      id={`add-youth-${event.id}`}
+                      value={youthName}
+                      knownNames={knownYouthNames}
+                      required
+                      onChange={(value) => {
+                        setYouthName(value)
+                        setAddError(null)
+                      }}
+                    />
+                    {addError && (
+                      <p className="text-sm text-[var(--danger)]">{addError}</p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="submit"
+                        disabled={adding}
+                        className="sticky-btn text-base"
+                      >
+                        {adding ? 'Adding…' : 'Add this youth'}
+                      </button>
+                      <button
+                        type="button"
+                        className="min-h-11 px-3 font-extrabold"
+                        onClick={() => {
+                          setAddingYouth(false)
+                          setYouthName('')
+                          setAddError(null)
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : (
                   <button
                     type="button"
-                    onClick={() => {
-                      setAddingYouth(false)
-                      setYouthName('')
-                      setAddError(null)
-                    }}
-                    className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                    className="inline-flex min-h-9 items-center gap-1.5 text-sm font-extrabold text-[var(--marker)]"
+                    onClick={() => setAddingYouth(true)}
                   >
-                    Cancel
+                    <UserPlus className="h-4 w-4" aria-hidden />
+                    Add a youth
                   </button>
-                </div>
-              </form>
-            ) : (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setAddingYouth(true)}
-                  className="text-sm text-blue-300 hover:text-blue-200 font-medium"
-                >
-                  + Add youth to this event
-                </button>
+                )}
               </div>
             )}
-          </div>
-        )}
+
+            {onDelete && (
+              <div>
+                {confirmDelete ? (
+                  <div className="space-y-2 rounded-sm bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] p-3">
+                    <p className="text-sm font-extrabold">
+                      Delete {event.title}? This can’t be undone.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={deleting}
+                        className="min-h-11 bg-[var(--danger)] px-4 font-extrabold text-[var(--magnet-ink)]"
+                        onClick={handleDelete}
+                      >
+                        {deleting ? 'Deleting…' : 'Delete event'}
+                      </button>
+                      <button
+                        type="button"
+                        className="min-h-11 px-3 font-extrabold"
+                        onClick={() => setConfirmDelete(false)}
+                      >
+                        Keep it
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="inline-flex min-h-11 items-center gap-1.5 text-sm font-extrabold text-[var(--danger)]"
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden />
+                    Delete
+                  </button>
+                )}
+              </div>
+            )}
+        </div>
       </div>
-    </div>
+    </article>
   )
 }

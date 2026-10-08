@@ -1,6 +1,6 @@
 # Ward Youth Activities
 
-A shared-codebase event board for LDS ward youth activities. Anyone can submit an event; leaders approve at `/admin` before it appears on the public list.
+A shared-codebase event board for LDS ward youth activities. Anyone can add an event; it shows on This week immediately. Leaders can delete mistakes at `/admin`.
 
 ## Stack
 

@@ -29,7 +29,7 @@ Used mostly on phones (gym, carpool, church foyer, kitchen). Typical moment: “
 ## Capabilities and Constraints
 
 - Public home: all upcoming events grouped by week (This week, Next week, then Week of …), then by day. Past events are not the home-page job.
-- Submit: title, at least one youth, date, start and end time; optional location, address, contact, notes.
+- Submit: title, at least one youth, one or more dates with start time and optional end; place and address per date (a new date copies the last one’s times and place); optional shared contact and notes.
 - Add a youth name to an existing event; known names autocomplete.
 - Add an event to a personal calendar (.ics and Google Calendar).
 - Admin: password sign-in and delete. Approval/unpublish is not part of the product job; leftover `approved` values may remain unused.

@@ -2,50 +2,22 @@ import { useState } from 'react'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
+import { EventDateSlips } from '../components/EventDateSlips'
 import { SiteChrome } from '../components/SiteChrome'
 import { YouthNameInput } from '../components/YouthNameInput'
 import { getWardName } from '../lib/auth.server'
+import {
+  emptyOccurrence,
+  occurrenceFromPrevious,
+  submitEventSchema,
+  type EventOccurrence,
+  type SubmitEventInput,
+} from '../lib/event-form'
 import { createEvent, getKnownYouthNames } from '../lib/events.server'
-import { localDateTime } from '../lib/schedule'
-
-const eventSchema = z
-  .object({
-    title: z.string().trim().min(1, 'Add an event title'),
-    participant_names: z
-      .array(z.string().trim().min(1, 'Add at least one youth'))
-      .min(1, 'Add at least one youth'),
-    date: z.string().min(1, 'Choose a date'),
-    start_time: z.string().min(1, 'Choose a start time'),
-    end_time: z.string().min(1, 'Choose an end time'),
-    location_name: z.string().trim().optional(),
-    address: z.string().trim().optional(),
-    contact_name: z.string().trim().optional(),
-    contact_email: z
-      .string()
-      .trim()
-      .email('Email needs an @ — try name@example.com')
-      .optional()
-      .or(z.literal('')),
-    contact_phone: z.string().trim().optional(),
-    notes: z.string().trim().optional(),
-  })
-  .refine(
-    (data) => {
-      const startDateTime = localDateTime(data.date, data.start_time)
-      const endDateTime = localDateTime(data.date, data.end_time)
-      return endDateTime > startDateTime
-    },
-    {
-      message: 'End time needs to be after the start time',
-      path: ['end_time'],
-    },
-  )
-
-type EventFormData = z.infer<typeof eventSchema>
 
 const submitEvent = createServerFn({ method: 'POST' })
-  .validator((data: EventFormData) => {
-    return eventSchema.parse(data)
+  .validator((data: SubmitEventInput) => {
+    return submitEventSchema.parse(data)
   })
   .handler(async ({ data }) => {
     return createEvent(data)
@@ -61,18 +33,24 @@ export const Route = createFileRoute('/submit')({
   loader: async () => await getSubmitPage(),
 })
 
-const emptyForm: EventFormData = {
+type EventFormState = {
+  title: string
+  participant_names: Array<string>
+  contact_name: string
+  contact_email: string
+  contact_phone: string
+  notes: string
+  occurrences: Array<EventOccurrence>
+}
+
+const emptyForm: EventFormState = {
   title: '',
   participant_names: [''],
-  date: '',
-  start_time: '',
-  end_time: '',
-  location_name: '',
-  address: '',
   contact_name: '',
   contact_email: '',
   contact_phone: '',
   notes: '',
+  occurrences: [emptyOccurrence()],
 }
 
 function SubmitPage() {
@@ -80,7 +58,8 @@ function SubmitPage() {
   const { knownYouthNames, wardName } = Route.useLoaderData()
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [formData, setFormData] = useState<EventFormData>(emptyForm)
+  const [multiple, setMultiple] = useState(false)
+  const [formData, setFormData] = useState<EventFormState>(emptyForm)
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -96,11 +75,27 @@ function SubmitPage() {
     setSaving(true)
 
     try {
+      const occurrences = multiple
+        ? formData.occurrences
+        : formData.occurrences.slice(0, 1)
       const created = await submitEvent({
         data: {
-          ...formData,
+          title: formData.title,
           participant_names: formData.participant_names.filter(
             (name) => name.trim().length > 0,
+          ),
+          contact_name: formData.contact_name,
+          contact_email: formData.contact_email,
+          contact_phone: formData.contact_phone,
+          notes: formData.notes,
+          occurrences: occurrences.map(
+            ({ date, start_time, end_time, location_name, address }) => ({
+              date,
+              start_time,
+              end_time: end_time.trim() || undefined,
+              location_name,
+              address,
+            }),
           ),
         },
       })
@@ -116,6 +111,12 @@ function SubmitPage() {
     }
   }
 
+  const dateCount = multiple ? formData.occurrences.length : 1
+  const postLabel =
+    dateCount === 1
+      ? 'Post it for the ward'
+      : `Post ${dateCount} dates for the ward`
+
   return (
     <SiteChrome wardName={wardName} current="submit">
       <div>
@@ -127,7 +128,7 @@ function SubmitPage() {
 
         {error && (
           <p
-            className="mt-4 border-l-0 bg-[color-mix(in_srgb,var(--danger)_12%,transparent)] px-3 py-3 text-[var(--danger)]"
+            className="mt-4 bg-[color-mix(in_srgb,var(--danger)_12%,transparent)] px-3 py-3 text-[var(--danger)]"
             role="alert"
           >
             {error}
@@ -204,103 +205,51 @@ function SubmitPage() {
               }}
               className="text-sm font-extrabold text-[var(--marker)]"
             >
-              Add another name
+              Add another youth
             </button>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="date" className="block text-sm font-extrabold">
-                Date
-              </label>
-              <input
-                type="date"
-                id="date"
-                name="date"
-                value={formData.date}
-                onChange={handleChange}
-                required
-                className="field"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="start_time"
-                  className="block text-sm font-extrabold"
-                >
-                  Starts
-                </label>
-                <input
-                  type="time"
-                  id="start_time"
-                  name="start_time"
-                  value={formData.start_time}
-                  onChange={handleChange}
-                  required
-                  className="field"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="end_time"
-                  className="block text-sm font-extrabold"
-                >
-                  Ends
-                </label>
-                <input
-                  type="time"
-                  id="end_time"
-                  name="end_time"
-                  value={formData.end_time}
-                  onChange={handleChange}
-                  required
-                  className="field"
-                />
-              </div>
-            </div>
-          </div>
-
-          <fieldset className="space-y-4">
-            <legend className="font-display text-2xl">Where it’s happening</legend>
-            <div>
-              <label
-                htmlFor="location_name"
-                className="block text-sm font-extrabold"
-              >
-                Place
-              </label>
-              <input
-                type="text"
-                id="location_name"
-                name="location_name"
-                value={formData.location_name}
-                onChange={handleChange}
-                className="field"
-                placeholder="Acorn Park Soccer Fields"
-              />
-            </div>
-            <div>
-              <label htmlFor="address" className="block text-sm font-extrabold">
-                Address
-              </label>
-              <input
-                type="text"
-                id="address"
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                className="field"
-                placeholder="123 Main St"
-              />
-            </div>
-          </fieldset>
+          <EventDateSlips
+            occurrences={formData.occurrences}
+            multiple={multiple}
+            onChange={(id, patch) => {
+              setFormData((prev) => ({
+                ...prev,
+                occurrences: prev.occurrences.map((occurrence) =>
+                  occurrence.id === id ? { ...occurrence, ...patch } : occurrence,
+                ),
+              }))
+              setError(null)
+            }}
+            onAdd={() => {
+              setMultiple(true)
+              setFormData((prev) => ({
+                ...prev,
+                occurrences: [
+                  ...prev.occurrences,
+                  occurrenceFromPrevious(
+                    prev.occurrences[prev.occurrences.length - 1],
+                  ),
+                ],
+              }))
+            }}
+            onRemove={(id) => {
+              setFormData((prev) => {
+                const next = prev.occurrences.filter(
+                  (occurrence) => occurrence.id !== id,
+                )
+                return {
+                  ...prev,
+                  occurrences: next.length > 0 ? next : [emptyOccurrence()],
+                }
+              })
+            }}
+          />
 
           <fieldset className="space-y-4">
             <legend className="font-display text-2xl">Who to call</legend>
             <p className="text-sm text-[var(--muted)]">
-              Someone families can contact for more information about this
-              event.
+              Someone families can contact about this event.
             </p>
             <div>
               <label
@@ -374,7 +323,7 @@ function SubmitPage() {
 
           <div className="flex gap-3 pb-4">
             <button type="submit" disabled={saving} className="sticky-btn flex-1">
-              {saving ? 'Posting…' : 'Post it for the ward'}
+              {saving ? 'Posting…' : postLabel}
             </button>
             <Link to="/" className="inline-flex min-h-12 items-center px-3 font-extrabold">
               Back to schedule

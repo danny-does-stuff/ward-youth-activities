@@ -67,6 +67,9 @@ function formatClock(iso: string): string {
 
 export function formatTimeRange(event: YouthEvent): string {
   const start = formatClock(event.starts_at)
+  if (new Date(event.starts_at).getTime() === new Date(event.ends_at).getTime()) {
+    return start
+  }
   const end = formatClock(event.ends_at)
   const startMeridiem = start.slice(-2)
   const endMeridiem = end.slice(-2)
